@@ -1,5 +1,5 @@
 # Lab-only infrastructure. DO NOT APPLY until billing, quota, and cleanup preflight are complete.
-# GPU node count defaults to zero. Even the CPU cluster costs money.
+# Even a CPU-only GKE cluster incurs charges.
 resource "google_service_account" "gke_nodes" {
   account_id   = "gke-vllm-lab-nodes"
   display_name = "GKE vLLM lab node identity"
@@ -21,6 +21,7 @@ resource "google_compute_subnetwork" "lab" {
   ip_cidr_range = "10.20.0.0/20"
   region        = var.region
   network       = google_compute_network.lab.id
+
   secondary_ip_range {
     range_name    = "pods"
     ip_cidr_range = "10.24.0.0/16"
@@ -40,13 +41,16 @@ resource "google_container_cluster" "lab" {
   initial_node_count       = 1
   deletion_protection      = false
   networking_mode          = "VPC_NATIVE"
+
   ip_allocation_policy {
     cluster_secondary_range_name  = "pods"
     services_secondary_range_name = "services"
   }
+
   workload_identity_config {
     workload_pool = "${var.project_id}.svc.id.goog"
   }
+
   lifecycle {
     precondition {
       condition     = var.acknowledge_paid_infrastructure
@@ -60,6 +64,7 @@ resource "google_container_node_pool" "cpu" {
   location   = var.zone
   cluster    = google_container_cluster.lab.name
   node_count = 1
+
   node_config {
     machine_type    = "e2-standard-2"
     service_account = google_service_account.gke_nodes.email
@@ -71,15 +76,20 @@ resource "google_container_node_pool" "cpu" {
   depends_on = [google_project_iam_member.node_minimum]
 }
 
+# Create the GPU pool only after explicit approval.
+# count=0 omits the pool entirely, rather than creating a zero-sized node pool.
 resource "google_container_node_pool" "gpu" {
+  count      = var.gpu_node_count
   name       = "t4-inference"
   location   = var.zone
   cluster    = google_container_cluster.lab.name
-  node_count = var.gpu_node_count
+  node_count = 1
+
   node_config {
     machine_type    = "n1-standard-4"
     service_account = google_service_account.gke_nodes.email
     oauth_scopes    = ["https://www.googleapis.com/auth/cloud-platform"]
+
     guest_accelerator {
       type  = "nvidia-tesla-t4"
       count = 1
@@ -93,8 +103,8 @@ resource "google_container_node_pool" "gpu" {
   }
   lifecycle {
     precondition {
-      condition     = var.gpu_node_count == 0 || var.acknowledge_gpu_cost
-      error_message = "GPU creation blocked. Set acknowledge_gpu_cost=true only after approval and pricing check."
+      condition     = var.acknowledge_gpu_cost
+      error_message = "GPU creation blocked until acknowledge_gpu_cost=true and preflight is complete."
     }
   }
   depends_on = [google_project_iam_member.node_minimum]
