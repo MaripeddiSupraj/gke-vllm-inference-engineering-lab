@@ -1,0 +1,7 @@
+# Copy to terraform.tfvars (ignored by Git). Do not apply until approved.
+project_id = "REPLACE_WITH_YOUR_DEDICATED_PROJECT_ID"
+region     = "us-central1"
+zone       = "us-central1-a"
+gpu_node_count                  = 0
+acknowledge_paid_infrastructure = false
+acknowledge_gpu_cost            = false
