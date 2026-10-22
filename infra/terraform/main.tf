@@ -80,18 +80,18 @@ resource "google_container_node_pool" "cpu" {
 # count=0 omits the pool entirely, rather than creating a zero-sized node pool.
 resource "google_container_node_pool" "gpu" {
   count      = var.gpu_node_count
-  name       = "t4-inference"
+  name       = "l4-inference"
   location   = var.zone
   cluster    = google_container_cluster.lab.name
   node_count = 1
 
   node_config {
-    machine_type    = "n1-standard-4"
+    machine_type    = "g2-standard-4"
     service_account = google_service_account.gke_nodes.email
     oauth_scopes    = ["https://www.googleapis.com/auth/cloud-platform"]
 
     guest_accelerator {
-      type  = "nvidia-tesla-t4"
+      type  = "nvidia-l4"
       count = 1
       gpu_driver_installation_config {
         gpu_driver_version = "DEFAULT"
