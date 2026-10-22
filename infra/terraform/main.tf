@@ -67,6 +67,7 @@ resource "google_container_node_pool" "cpu" {
 
   node_config {
     machine_type    = "e2-standard-2"
+    labels          = { workload = "cpu" }
     service_account = google_service_account.gke_nodes.email
     oauth_scopes    = ["https://www.googleapis.com/auth/cloud-platform"]
     workload_metadata_config {
@@ -87,6 +88,13 @@ resource "google_container_node_pool" "gpu" {
 
   node_config {
     machine_type    = "g2-standard-4"
+    labels          = { workload = "gpu-inference" }
+
+    taint {
+      key    = "dedicated"
+      value  = "gpu-inference"
+      effect = "NO_SCHEDULE"
+    }
     service_account = google_service_account.gke_nodes.email
     oauth_scopes    = ["https://www.googleapis.com/auth/cloud-platform"]
 
