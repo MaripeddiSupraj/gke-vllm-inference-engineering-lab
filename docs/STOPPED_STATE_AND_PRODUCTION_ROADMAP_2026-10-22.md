@@ -1,6 +1,6 @@
 # STOPPED STATE — 2026-10-22 — GCP GPU / GKE LLM inference lab
 
-**Status: PAUSED BY OPERATOR, END OF PHASE 1.** This file is the durable handoff and scope baseline for the next session and future technical blog series. **IMPORTANT: cloud resource deletion was requested but is NOT confirmed by this GitHub record.** Do not mark resources deleted until the operator executes and verifies the teardown. No PR merge or production readiness is claimed.
+**Status: PAUSED BY OPERATOR, END OF PHASE 1.** This file is the durable handoff and scope baseline for the next session and future technical blog series. **Updated after operator CLI receipts: GKE cluster and L4 GPU VM deletion verified by empty project-wide listings; one Artifact Registry repository remains.** See teardown verification section below. No PR merge or production readiness is claimed.
 
 ## Repository and change control
 - Repo: `MaripeddiSupraj/gke-vllm-inference-engineering-lab`; working branch `feat/gke-l4-inference-manifests-20261022`; draft PR #11. Keep draft; no merge without authorization.
@@ -29,6 +29,27 @@
 3. Audit residual persistent disks, static IPs, load balancers, snapshots, Artifact Registry storage, Cloud NAT, logging/metrics charges, networking, and service-specific resources. Retain repo and IaC state securely for recreation.
 4. Verify cluster/VM absent in GCP and document actual command output, timestamps, residual assets, and costs. **Only then change status to TEARDOWN VERIFIED.**
 5. No automatic recreation tomorrow; quota, capacity, driver support and projected cost must be checked first.
+
+
+## Operator-reported teardown verification — 2026-10-22, approximately 21:43 IST
+
+The operator supplied the following **read-only GCP CLI outputs** for project `gke-vllm-learning-lab` after requesting teardown. These are operator-provided receipts; no GCP command was run directly by this GitHub update.
+
+| Resource check | Observed result |
+| --- | --- |
+| `gcloud container clusters list` | `Listed 0 items.` |
+| `gcloud compute instances list` | `Listed 0 items.` — **the former NVIDIA L4 VM is absent from the project-wide VM inventory; no active Compute Engine GPU VM remains listed** |
+| `gcloud compute disks list` | `Listed 0 items.` |
+| `gcloud compute addresses list` | `Listed 0 items.` |
+| `gcloud compute forwarding-rules list` | `Listed 0 items.` |
+| `gcloud compute routers list` | `Listed 0 items.` |
+| `gcloud compute snapshots list` | `Listed 0 items.` |
+| `gcloud storage buckets list` | `Listed 0 items.` |
+| `gcloud artifacts repositories list` | **One retained repository**: `ai-inference` (Docker, `asia-southeast1`, 98.002 MB at check time) |
+
+**Updated shutdown assessment:** GKE cluster, GPU VM, disks, addresses, forwarding rules, routers, snapshots and GCS buckets are absent in the inspected project listings. **GPU VM compute teardown is verified from the project-wide VM listing.** The Artifact Registry repository remains intentionally retained for possible next-day reuse; small storage charges may continue. This is not a claim of zero project spend or exhaustive resource inventory. Billing reports can lag; inspect Billing Reports, Terraform state drift, service-specific resources and remaining IAM/network objects before asserting total cleanup. The explicit named-instance `describe` command was not supplied, but the project-wide instance list is empty.
+
+**Tomorrow:** Confirm the retained image tags, Terraform state reconciliation, standard L4 GPU quota and spend approval before provisioning GKE GPU node pool. Do not automatically recreate resources.
 
 ## Next session — Phase 2 priority: GKE GPU-first deployment
 1. Verify project/billing/quota (standard L4 limit 1), zone GPU capacity, GKE version compatibility, node image and driver support; establish budget/alerts. Existing GPU VM must be gone or quota raised before attempting a new standard L4.
@@ -70,4 +91,4 @@ Suggested **10-part blog series**, each article must include: prerequisites, arc
 - **Gate E**: production controls and measurement progressively implemented; no premature production-ready label.
 - **Gate F**: SGLang comparison only after vLLM baseline is repeatable.
 
-**Final state at time of writing:** Phase 1 evidence documented; operator requested teardown; no live teardown verification attached yet. This is intentionally strict.
+**Final state after operator receipts:** Phase 1 paused; GKE and GPU VM compute resources absent; retained Artifact Registry repository (98.002 MB); complete zero-cost cleanup not asserted. This is intentionally strict.
