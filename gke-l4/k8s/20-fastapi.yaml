@@ -18,6 +18,16 @@ spec:
         - name: fastapi
           image: REPLACE_WITH_YOUR_ARTIFACT_REGISTRY_IMAGE
           imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
           ports:
             - containerPort: 8080
               name: http
