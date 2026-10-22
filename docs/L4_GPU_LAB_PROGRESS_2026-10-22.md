@@ -56,6 +56,14 @@ Observed successful `nvidia-smi` output: NVIDIA L4, NVIDIA-SMI 615.71.10, KMD 61
 - [ ] Decide whether to return to GKE after standalone VM lab (requires explicit approval and cost/capacity check)
 - [ ] Stop or delete VM after session; verify cleanup and actual charges
 
+## Learning approach and disk check
+
+The learner requested an architecture-first, in-depth explanation for each important step: what, why, internals, production trade-offs, troubleshooting and measurable evidence. Do not treat this as a command-only installation walkthrough.
+
+- `df -h /` observed 30G total, 5.3G used, 23G available, 19% used.
+- `docker info --format '{{.DockerRootDir}}'` returned `/var/lib/docker`.
+- Before pulling a vLLM image, inspect Docker's storage usage and available capacity. Distinguish Docker image/layer storage, model caches, system RAM, and GPU VRAM. Keep headroom for image extraction and temporary files.
+
 ## Cost and safety
 - Previous indicative estimate for this VM: approximately USD 0.87/hour, **not an actual billing receipt**; disk/network/tax extra. Verify current official pricing and actual Cloud Billing usage.
 - VM compute/GPU accrues charges while RUNNING, including during troubleshooting.
