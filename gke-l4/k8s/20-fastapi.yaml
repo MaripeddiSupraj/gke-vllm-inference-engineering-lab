@@ -1,0 +1,64 @@
+# Replace the image with your built Artifact Registry image before applying.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fastapi
+  namespace: inference-lab
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fastapi
+  template:
+    metadata:
+      labels:
+        app: fastapi
+    spec:
+      containers:
+        - name: fastapi
+          image: REPLACE_WITH_YOUR_ARTIFACT_REGISTRY_IMAGE
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: VLLM_URL
+              value: http://vllm:8000/v1/chat/completions
+            - name: MODEL_ID
+              value: Qwen/Qwen2.5-0.5B-Instruct
+            - name: INFERENCE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: inference-api
+                  key: api-key
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            periodSeconds: 15
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fastapi
+  namespace: inference-lab
+spec:
+  type: ClusterIP
+  selector:
+    app: fastapi
+  ports:
+    - port: 8080
+      targetPort: http
+      name: http
