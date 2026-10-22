@@ -1,12 +1,12 @@
-# GKE L4 inference deployment — prepared, not deployed
+# GKE L4 inference deployment — CPU GKE to external L4 VM validated
 
-This directory contains an offline-prepared example for **GKE Standard**: FastAPI (CPU) -> internal vLLM Service -> vLLM (one NVIDIA L4 GPU) -> Qwen2.5-0.5B-Instruct. It is **not yet validated on a GKE cluster**.
+This directory contains an offline-prepared example for **GKE Standard**: FastAPI (CPU) -> internal vLLM Service -> vLLM (one NVIDIA L4 GPU) -> Qwen2.5-0.5B-Instruct. The GPU-on-GKE target is not yet validated; CPU FastAPI on GKE → external L4 VM inference was verified on 2026-10-22. See [live lab](../docs/LIVE_LAB_2026-10-22.md) and [VM backend overlay](overlays/vm-backend/README.md).
 
 ## What is already verified
 On the standalone Compute Engine L4 VM, vLLM v0.11.0 served Qwen2.5-0.5B-Instruct, FastAPI forwarded chat requests, API-key authentication rejected missing keys and accepted correct keys, and a Mac reached FastAPI through an SSH tunnel. This does **not** prove GKE deployment works.
 
 ## Before spending money
-- GKE cluster list was empty.
+- Historical preflight: GKE cluster list was empty. A billable CPU-only GKE cluster was subsequently created on 2026-10-22.
 - Singapore regional L4 GPU quota was 1 used of 1 (standalone VM). **Quota and zonal stock are different constraints**. Do not provision GKE GPU resources while the standalone VM uses the only quota without a conscious migration plan.
 - Investigate the previously observed ₹43.3k gross billing figure and confirm credits and budget. Budget alerts are not hard spending caps.
 - No GKE cluster, public LoadBalancer, Ingress, or Gateway is created by these files. All Services are internal ClusterIP.
@@ -17,9 +17,9 @@ On the standalone Compute Engine L4 VM, vLLM v0.11.0 served Qwen2.5-0.5B-Instruc
 ```bash
 gcloud builds submit gke-l4/app --tag REGION-docker.pkg.dev/PROJECT/REPOSITORY/fastapi-inference:lab-v1
 ```
-Replace `REPLACE_WITH_YOUR_ARTIFACT_REGISTRY_IMAGE` in `k8s/20-fastapi.yaml` with the resulting full image reference. The image registry and permissions must be configured separately.
+For the verified VM-backed lab, use the [Kustomize overlay](overlays/vm-backend/README.md), which sets the AMD64 image and private vLLM endpoint without editing the generic base. IAM access was granted manually.
 
-## Deployment (ONLY after cluster, GPU node and image exist)
+## Target GPU-on-GKE deployment (ONLY after GPU node and image exist)
 ```bash
 kubectl apply -f gke-l4/k8s/00-namespace.yaml
 # Do not commit secrets. This prompts locally, without echoing the key.
@@ -31,6 +31,10 @@ kubectl apply -f gke-l4/k8s/20-fastapi.yaml
 kubectl -n inference-lab get pods -w
 ```
 The `read` command above is for **zsh** on macOS. For Bash, use `read -rsp "API key: " API_KEY; echo`. The Kubernetes Secret is not encrypted by this manifest; configure GKE secret encryption, RBAC, and secret management appropriately for production.
+
+## Verified CPU-on-GKE / external GPU VM variant
+
+See the [lab-specific overlay](overlays/vm-backend/README.md). Preview with `kubectl kustomize` and `kubectl diff -k` before applying. This overlay is committed but has not yet been independently applied.
 
 ## Test privately
 ```bash
