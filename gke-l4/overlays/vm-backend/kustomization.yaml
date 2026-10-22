@@ -1,0 +1,22 @@
+# Temporary, environment-specific GKE CPU -> standalone L4 VM overlay.
+# Requires active private VPC peering, a restricted firewall and private vLLM proxy.
+# DO NOT use this private IP in another environment without verifying it.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../k8s
+images:
+  - name: REPLACE_WITH_YOUR_ARTIFACT_REGISTRY_IMAGE
+    newName: asia-southeast1-docker.pkg.dev/gke-vllm-learning-lab/ai-inference/fastapi-inference
+    newTag: lab-amd64-v1
+patches:
+  - target:
+      group: apps
+      version: v1
+      kind: Deployment
+      name: fastapi
+      namespace: inference-lab
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/env/0/value
+        value: http://10.148.0.2:8000/v1/chat/completions

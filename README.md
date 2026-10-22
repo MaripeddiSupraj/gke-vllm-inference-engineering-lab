@@ -1,12 +1,14 @@
 # GKE + vLLM Inference Engineering Lab
 
+> **Phase 1 paused — 2026-10-22.** See **[STOPPED STATE + complete production GKE inference roadmap](docs/STOPPED_STATE_AND_PRODUCTION_ROADMAP_2026-10-22.md)** for the verified GPU/GKE/vLLM lab evidence, pending teardown verification, tomorrow's GPU node-pool plan, production security/auth/rate limiting, Inference Gateway, Kueue, llm-d, scaling, observability, SRE, FinOps, and the 10-part blog series including the later SGLang comparison. **This is documented/planned work, not a claim those production features are deployed.** The GPU VM and GKE cluster must be verified deleted before marking teardown complete.
+
 > A hands-on, evidence-first learning lab for Cloud/DevOps engineers who want to understand the complete path from a chat request to NVIDIA GPU inference on Google Kubernetes Engine.
 
-**Status:** Phase 0 — planning and offline preparation. **No GCP resources have been created or validated yet.**
+**Status (2026-10-22):** Live CPU-only GKE + separate NVIDIA L4 VM **end-to-end inference verified**. GKE GPU node pool, comprehensive metrics, production security and cleanup **not yet verified**. See [live lab receipt and next steps](docs/LIVE_LAB_2026-10-22.md).
 
 ## What we're building
 
-A small FastAPI chat application will call an OpenAI-compatible **vLLM** HTTP endpoint running in a GPU-enabled Kubernetes pod. vLLM will serve a small open-weight instruction model using an NVIDIA GPU. We'll observe requests, GPU memory, model loading, scheduling, token streaming, prefill, decode, KV-cache behavior, and controlled failure scenarios.
+The target architecture uses a GPU-enabled Kubernetes vLLM Pod. **Today's verified implementation instead runs FastAPI on a GKE CPU node and vLLM on a separate NVIDIA L4 GPU VM, connected by VPC peering and a temporary private proxy.** vLLM will serve a small open-weight instruction model using an NVIDIA GPU. We'll observe requests, GPU memory, model loading, scheduling, token streaming, prefill, decode, KV-cache behavior, and controlled failure scenarios.
 
 ```mermaid
 flowchart LR
@@ -26,7 +28,7 @@ flowchart LR
 | Choice | Initial plan | Why |
 | --- | --- | --- |
 | GKE mode | **Standard, zonal**, Terraform-managed | Direct visibility into node pools, node OS, scheduling, and teardown |
-| GPU | **One NVIDIA T4 (16 GB)** if quota/capacity allows | Small, practical accelerator for introductory inference experiments |
+| GPU | **Existing NVIDIA L4 VM** for the validated phase; a GKE L4 GPU pool remains a separately approved paid experiment | Small, practical accelerator for introductory inference experiments |
 | Model | Small instruction model; candidate: `Qwen/Qwen2.5-0.5B-Instruct` | Keep model weight and KV-cache demands low; validate with pinned vLLM version |
 | Serving | One vLLM Deployment replica, one internal ClusterIP Service | Isolate the inference engine from the application |
 | App | FastAPI, initially run locally via `kubectl port-forward` | Test HTTP end-to-end without a public load balancer |
@@ -52,7 +54,7 @@ See [the learning roadmap](docs/ROADMAP.md), [architecture](docs/ARCHITECTURE.md
 
 ## Start here
 
-1. **Do not run `terraform apply` yet.** Finish the local preparation and confirm your GCP billing status, actual regional pricing, GPU quota, and capacity.
+1. **A billable GKE cluster was provisioned on 2026-10-22.** Check current resource state and costs before further applies; review the exact Terraform destroy plan before ending the lab.
 2. Review [the roadmap](docs/ROADMAP.md) and the task issues.
 3. Prepare a *dedicated lab project* and configure billing alerts. **Cloud Billing budgets alert but do not normally stop Compute Engine/GKE usage.**
 4. Apply infrastructure only during an explicitly planned GPU lab window, then delete and **verify** all chargeable resources.
@@ -81,9 +83,10 @@ See [the learning roadmap](docs/ROADMAP.md), [architecture](docs/ARCHITECTURE.md
 - [x] Repository initialized with a documented scope and reference architecture
 - [ ] Offline code and Terraform validation
 - [ ] GCP billing and GPU quota verified
-- [ ] GKE/T4 resources provisioned
-- [ ] vLLM and FastAPI inference request demonstrated
+- [x] CPU-only GKE cluster provisioned; separate NVIDIA L4 GPU VM serving vLLM
+- [x] FastAPI-to-vLLM real inference request demonstrated across VPC peering
+- [ ] GKE GPU node pool and GPU Pod scheduling demonstrated
 - [ ] GPU/inference experiments captured
 - [ ] Infrastructure destroyed and charges verified
 
-> **No live GPU experiments have been performed yet.** This README will evolve as we complete each evidence-backed task.
+> **Verified:** one authenticated end-to-end Qwen inference response (36 prompt + 44 completion tokens) on 2026-10-22. See [the detailed evidence and remaining work](docs/LIVE_LAB_2026-10-22.md). GPU Pod scheduling, performance characterization, monitoring validation and teardown remain open.
