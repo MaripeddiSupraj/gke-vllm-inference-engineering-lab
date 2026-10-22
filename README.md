@@ -1,10 +1,10 @@
 # GKE + vLLM Inference Engineering Lab
 
-> **Phase 1 paused — 2026-10-22.** See **[STOPPED STATE + complete production GKE inference roadmap](docs/STOPPED_STATE_AND_PRODUCTION_ROADMAP_2026-10-22.md)** for the verified GPU/GKE/vLLM lab evidence, pending teardown verification, tomorrow's GPU node-pool plan, production security/auth/rate limiting, Inference Gateway, Kueue, llm-d, scaling, observability, SRE, FinOps, and the 10-part blog series including the later SGLang comparison. **This is documented/planned work, not a claim those production features are deployed.** The GPU VM and GKE cluster must be verified deleted before marking teardown complete.
+> **Phase 1 PAUSED / GPU compute shutdown verified (2026-10-22).** Operator CLI inventory showed **0 GKE clusters, 0 VMs and 0 disks**; Artifact Registry `ai-inference` (98.002 MB) remains. **[Complete production end-goal Mermaid architecture + detailed pending/acceptance register](docs/PRODUCTION_TARGET_ARCHITECTURE_AND_PENDING_REGISTER.md)** · **[Stopped-state and teardown receipts](docs/STOPPED_STATE_AND_PRODUCTION_ROADMAP_2026-10-22.md)**. Phase 2 starts with GPU quota/cost/IaC preflight, then a real GPU node pool in GKE. These production features are **targets, not deployed capabilities**.
 
 > A hands-on, evidence-first learning lab for Cloud/DevOps engineers who want to understand the complete path from a chat request to NVIDIA GPU inference on Google Kubernetes Engine.
 
-**Status (2026-10-22):** Live CPU-only GKE + separate NVIDIA L4 VM **end-to-end inference verified**. GKE GPU node pool, comprehensive metrics, production security and cleanup **not yet verified**. See [live lab receipt and next steps](docs/LIVE_LAB_2026-10-22.md).
+**Historical Phase 1 result (2026-10-22):** CPU-only GKE + separate NVIDIA L4 VM **end-to-end inference verified**, benchmarked, then **deleted** (empty project-wide GKE/VM inventory). GKE GPU node pool, full production security, observability and SGLang **pending**. See [live lab receipt](docs/LIVE_LAB_2026-10-22.md) and [current pending register](docs/PRODUCTION_TARGET_ARCHITECTURE_AND_PENDING_REGISTER.md).
 
 ## What we're building
 
