@@ -14,6 +14,8 @@ spec:
       labels:
         app: fastapi
     spec:
+      nodeSelector:
+        workload: cpu
       containers:
         - name: fastapi
           image: REPLACE_WITH_YOUR_ARTIFACT_REGISTRY_IMAGE
