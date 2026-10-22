@@ -1,7 +1,7 @@
 # GPU Lab Progress — 2026-10-22
 
 ## Status
-**In progress — standalone NVIDIA L4 VM allocated; NVIDIA driver not yet verified.** This is a Compute Engine capacity/driver learning step, **not a successful GKE/vLLM deployment**.
+**In progress — standalone NVIDIA L4 VM allocated; NVIDIA driver verified successfully via nvidia-smi.** This is a Compute Engine capacity/driver learning step, **not a successful GKE/vLLM deployment**.
 
 ## Environment
 - GCP project: `gke-vllm-learning-lab`
@@ -21,8 +21,8 @@
 7. Reconnected successfully after reboot. `nvidia-smi` returned `command not found`; `sudo python3 ~/cuda_installer.pyz verify_driver` reported: `Couldn't find nvidia-smi, the driver is not installed.`
 8. `/opt/google/cuda-installer/installer.log` showed `The system needs to be rebooted to complete the installation process. The process will be continued after the reboot.` Follow-up entries only showed machine-type detection and working-directory selection. No definitive driver-install error in the supplied log tail.
 
-## Next action (not yet confirmed executed)
-Inside the VM, rerun installer after prerequisite reboot:
+## Driver verification — confirmed 2026-10-22 07:08:34
+After prerequisite reboot, reran the installer:
 
 ```bash
 sudo python3 ~/cuda_installer.pyz install_driver \
@@ -30,17 +30,17 @@ sudo python3 ~/cuda_installer.pyz install_driver \
   --installation-branch prod
 ```
 
-Capture output. Then check:
+The package installation built NVIDIA Open DKMS module version 615.71.10. The user then ran:
 
 ```bash
 nvidia-smi
 sudo python3 ~/cuda_installer.pyz verify_driver
 ```
 
-If still failing, inspect `/opt/google/cuda-installer/installer.log` and package/kernel status **before retrying again**.
+Observed successful `nvidia-smi` output: NVIDIA L4, NVIDIA-SMI 615.71.10, KMD 615.71.10, CUDA UMD 13.4, 23034 MiB total GPU memory, 0 MiB used, 0% GPU utilization, no GPU processes. Driver works; CUDA toolkit installation has not been established.\n\nIf future driver checks fail, inspect `/opt/google/cuda-installer/installer.log` and package/kernel status **before retrying again**.
 
 ## Pending milestones
-- [ ] NVIDIA driver installed and `nvidia-smi` verified
+- [x] NVIDIA driver installed and `nvidia-smi` verified
 - [ ] Confirm CUDA runtime/driver compatibility
 - [ ] Install Docker and NVIDIA Container Toolkit; validate GPU access from container
 - [ ] Run pinned small-model vLLM container and test OpenAI-compatible endpoint
@@ -55,4 +55,4 @@ If still failing, inspect `/opt/google/cuda-installer/installer.log` and package
 - Do not commit credentials, secrets, billing IDs, or ephemeral external IPs.
 
 ## Evidence limitations
-This record is based on terminal output supplied during the session, not independent access to the live VM or Cloud Billing. Driver installation, Docker, CUDA, vLLM and end-to-end inference **are not yet verified**.
+This record is based on terminal output supplied during the session, not independent access to the live VM or Cloud Billing. Driver installation and `nvidia-smi` are verified from user-provided terminal output. Docker, CUDA Toolkit, vLLM and end-to-end inference **are not yet verified**.
