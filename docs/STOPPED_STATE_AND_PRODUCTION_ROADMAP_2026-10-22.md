@@ -1,9 +1,9 @@
 # STOPPED STATE — 2026-10-22 — GCP GPU / GKE LLM inference lab
 
-**Status: PAUSED BY OPERATOR, END OF PHASE 1.** This file is the durable handoff and scope baseline for the next session and future technical blog series. **Updated after operator CLI receipts: GKE cluster and L4 GPU VM deletion verified by empty project-wide listings; one Artifact Registry repository remains.** See teardown verification section below. No PR merge or production readiness is claimed.
+**Status: PAUSED BY OPERATOR, END OF PHASE 1.** This file is the durable handoff and scope baseline for the next session and future technical blog series. **Updated after operator CLI receipts: GKE cluster and L4 GPU VM deletion verified by empty project-wide listings; one Artifact Registry repository remains.** See teardown verification section below. PR #11 has since been merged into main; production readiness is not claimed.
 
 ## Repository and change control
-- Repo: `MaripeddiSupraj/gke-vllm-inference-engineering-lab`; working branch `feat/gke-l4-inference-manifests-20261022`; draft PR #11. Keep draft; no merge without authorization.
+- Repo: `MaripeddiSupraj/gke-vllm-inference-engineering-lab`; feature branch `feat/gke-l4-inference-manifests-20261022`; **PR #11 merged into main** by operator authorization, squash commit `f4e0a4fca88e0ecd4b7ae1c44551018640d47b8f`.
 - Operator uses local Mac repository `~/gke-vllm-inference-engineering-lab`.
 - Prior evidence: `docs/LIVE_LAB_2026-10-22.md`, `docs/GPU_BENCHMARK_2026-10-22.md`, `docs/L4_CONCURRENCY_SCALING_2026-10-22.md`; inspect actual source manifests and Terraform rather than assuming their latest state.
 - Preserve Terraform state, variables, image tags/digests, benchmark scripts, service configuration, screenshots and proof logs before teardown. Do not commit secrets, API keys, credentials, Terraform state, model tokens, or private IP access tokens.
@@ -50,6 +50,10 @@ The operator supplied the following **read-only GCP CLI outputs** for project `g
 **Updated shutdown assessment:** GKE cluster, GPU VM, disks, addresses, forwarding rules, routers, snapshots and GCS buckets are absent in the inspected project listings. **GPU VM compute teardown is verified from the project-wide VM listing.** The Artifact Registry repository remains intentionally retained for possible next-day reuse; small storage charges may continue. This is not a claim of zero project spend or exhaustive resource inventory. Billing reports can lag; inspect Billing Reports, Terraform state drift, service-specific resources and remaining IAM/network objects before asserting total cleanup. The explicit named-instance `describe` command was not supplied, but the project-wide instance list is empty.
 
 **Tomorrow:** Confirm the retained image tags, Terraform state reconciliation, standard L4 GPU quota and spend approval before provisioning GKE GPU node pool. Do not automatically recreate resources.
+
+## Full production architecture and tracked pending work
+
+See **[Production target Mermaid architecture + complete pending/acceptance register](PRODUCTION_TARGET_ARCHITECTURE_AND_PENDING_REGISTER.md)**. This is the primary architecture and status index for future sessions, including authentication, rate limiting, gateways, Kueue, llm-d, GPU scheduling, scaling, observability, security, SRE, cost and the later SGLang parity lab.
 
 ## Next session — Phase 2 priority: GKE GPU-first deployment
 1. Verify project/billing/quota (standard L4 limit 1), zone GPU capacity, GKE version compatibility, node image and driver support; establish budget/alerts. Existing GPU VM must be gone or quota raised before attempting a new standard L4.
