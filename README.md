@@ -6,20 +6,125 @@
 
 **Historical Phase 1 result (2026-10-22):** CPU-only GKE + separate NVIDIA L4 VM **end-to-end inference verified**, benchmarked, then **deleted** (empty project-wide GKE/VM inventory). GKE GPU node pool, full production security, observability and SGLang **pending**. See [live lab receipt](docs/LIVE_LAB_2026-10-22.md) and [current pending register](docs/PRODUCTION_TARGET_ARCHITECTURE_AND_PENDING_REGISTER.md).
 
-## What we're building
+## Production end-goal architecture (target — not deployed)
 
-The target architecture uses a GPU-enabled Kubernetes vLLM Pod. **Today's verified implementation instead runs FastAPI on a GKE CPU node and vLLM on a separate NVIDIA L4 GPU VM, connected by VPC peering and a temporary private proxy.** vLLM will serve a small open-weight instruction model using an NVIDIA GPU. We'll observe requests, GPU memory, model loading, scheduling, token streaming, prefill, decode, KV-cache behavior, and controlled failure scenarios.
+This is the **canonical production architecture** for the project, kept in sync with [the detailed target architecture and acceptance register](docs/PRODUCTION_TARGET_ARCHITECTURE_AND_PENDING_REGISTER.md). It includes the client/edge path, identity and rate limits, inference routing, vLLM GPU serving, separate SGLang comparison, Kueue batch admission, scaling, security, observability and FinOps. **It is a target, not a representation of currently running cloud resources.**
 
 ```mermaid
-flowchart LR
-  U["User / Browser"] --> F["FastAPI chat backend"]
-  F -->|"POST /v1/chat/completions"| S["vLLM ClusterIP Service"]
-  S --> V["vLLM pod: API + scheduler + model worker"]
-  V --> G["NVIDIA GPU: weights + KV cache"]
-  G --> V
-  V --> F
-  F --> U
+flowchart TB
+  subgraph CLIENT["Clients and Consumers"]
+    APP["Web / Mobile / Backend"]
+    AGENT["AI Agents / RAG / Batch Clients"]
+    SDK["OpenAI-compatible SDK / Streaming SSE"]
+  end
+
+  subgraph EDGE["Public Edge / Zero-Trust Entry"]
+    DNS["DNS + HTTPS / Certificate"]
+    WAF["Cloud Armor / WAF / DDoS Protection"]
+    GLB["External or Internal Application Load Balancer"]
+    ID["OIDC / JWT / API Key Validation"]
+    POLICY["Tenant RBAC / Model Allowlist / RPM-TPM Quotas / Rate Limit / Request Size"]
+  end
+
+  subgraph GKE["Private GKE Standard — Production Workload Plane"]
+    subgraph CONTROL["Traffic Control and Admission"]
+      GW["Kubernetes Gateway API / GKE Inference Gateway"]
+      ROUTER["InferencePool / Endpoint Picker / llm-d routing"]
+      ADMIT["Overload Guard / Max In-flight / Queue / Backpressure / 429-503"]
+      FAST["Optional FastAPI / Business API / Prompt Validation"]
+    end
+
+    subgraph SERVE["Online Model Serving — GPU Node Pools"]
+      SVC["Internal Serving Service / Endpoint Discovery"]
+      V1["vLLM Pod A / Model Revision X"]
+      V2["vLLM Pod B / Model Revision X"]
+      V3["SGLang Pod / Separate Comparison Track"]
+      CACHE["Per-Replica KV + Prefix Cache / Optional Distributed Cache"]
+      GPU["NVIDIA GPU Nodes / Device Plugin / Drivers"]
+    end
+
+    subgraph BATCH["Batch Inference — Separate Admission Path"]
+      JOB["Job / RayJob / Batch Worker"]
+      KQ["Kueue LocalQueue / ClusterQueue / ResourceFlavor"]
+      BJ["GPU Batch Jobs / Priority / Fair Sharing"]
+    end
+
+    subgraph SCALE["Capacity and Lifecycle"]
+      HPA["HPA / KEDA / Custom Inference Metrics"]
+      CA["GKE Cluster Autoscaler / Node Pool Capacity"]
+      ROLL["Deploy / Canary / Rollback / Drain / PDB"]
+    end
+
+    subgraph PLATFORM["Platform Security"]
+      WI["Workload Identity Federation for GKE"]
+      SEC["Secrets / KMS / Least-Privilege IAM / RBAC"]
+      NET["Private VPC / NetworkPolicy / Egress Control / TLS"]
+      SUPPLY["Signed Images / SBOM / Model Provenance / Policy"]
+    end
+  end
+
+  subgraph DATA["Model and Platform Data"]
+    AR["Artifact Registry / Pinned Container Images"]
+    MODEL["GCS / Model Registry / Pinned Weights + Tokenizer"]
+    LOG["Audit Logs / Redacted Request Metadata"]
+    STATE["IaC / Git / CI-CD / Secret-Free Config"]
+  end
+
+  subgraph OBS["Observability, SRE and FinOps"]
+    OTEL["OpenTelemetry / Request and Trace IDs"]
+    PROM["Prometheus / Managed Service for Prometheus"]
+    DCGM["NVIDIA DCGM Exporter"]
+    MON["Cloud Monitoring / Logging / Trace / Grafana"]
+    SLO["TTFT / TPOT / p95-p99 / Queue / Errors / Tokens / Availability"]
+    ALERT["Alerts / Runbooks / Incident Response"]
+    COST["Billing / Cost per 1M Tokens / GPU Utilization / Budgets"]
+  end
+
+  APP --> DNS
+  AGENT --> DNS
+  SDK --> DNS
+  DNS --> WAF --> GLB --> ID --> POLICY --> GW
+  GW --> ROUTER --> ADMIT --> FAST --> SVC
+  FAST -. "optional bypass for direct OpenAI API" .-> SVC
+  SVC --> V1
+  SVC --> V2
+  SVC -. "benchmark separately" .-> V3
+  V1 --> CACHE
+  V2 --> CACHE
+  V1 --> GPU
+  V2 --> GPU
+  V3 --> GPU
+
+  AGENT -. "async / offline workload" .-> JOB
+  JOB --> KQ --> BJ --> GPU
+
+  HPA -. "replica scaling" .-> V1
+  HPA -. "replica scaling" .-> V2
+  CA -. "GPU node scaling" .-> GPU
+  ROLL -. "controlled deployment" .-> V1
+  ROLL -. "controlled deployment" .-> V2
+
+  AR -. "verified image pulls" .-> V1
+  AR -. "verified image pulls" .-> V3
+  MODEL -. "verified model load" .-> V1
+  MODEL -. "verified model load" .-> V3
+  WI -. "workload identity" .-> V1
+  SEC -. "secret and access policies" .-> GW
+  NET -. "traffic boundaries" .-> SVC
+  SUPPLY -. "artifact policy" .-> AR
+  STATE -. "deployment source" .-> ROLL
+
+  GW -. "gateway telemetry" .-> OTEL
+  V1 -. "inference metrics" .-> PROM
+  V2 -. "inference metrics" .-> PROM
+  GPU -. "GPU telemetry" .-> DCGM --> PROM
+  OTEL --> MON
+  PROM --> MON --> SLO --> ALERT
+  MON --> COST
+  POLICY -. "auditable usage" .-> LOG
 ```
+
+**Current vs target:** In completed Phase 1, FastAPI ran on CPU-only GKE and vLLM ran on a separate NVIDIA L4 VM over VPC peering. Both compute resources were subsequently deleted. **Next:** reconcile Terraform state and budget/quota, then run vLLM *inside GKE* on an actual L4 GPU node pool. See [the complete implementation status and acceptance criteria](docs/PRODUCTION_TARGET_ARCHITECTURE_AND_PENDING_REGISTER.md).
 
 **Key distinction:** Kubernetes schedules the **vLLM pod onto a GPU node**; the **vLLM scheduler** schedules inference work for the GPU. These are separate schedulers. The vLLM pod is a normal application workload that requests GPU resources; it is not the Kubernetes API server or a per-node DaemonSet.
 
@@ -86,7 +191,7 @@ See [the learning roadmap](docs/ROADMAP.md), [architecture](docs/ARCHITECTURE.md
 - [x] CPU-only GKE cluster provisioned; separate NVIDIA L4 GPU VM serving vLLM
 - [x] FastAPI-to-vLLM real inference request demonstrated across VPC peering
 - [ ] GKE GPU node pool and GPU Pod scheduling demonstrated
-- [ ] GPU/inference experiments captured
-- [ ] Infrastructure destroyed and charges verified
+- [x] Phase 1 GPU VM inference benchmarks and Prometheus/DCGM evidence captured; GKE GPU Pod experiments pending
+- [x] GKE cluster, L4 GPU VM and disks deleted (verified by operator CLI inventories); billing charges may lag and Artifact Registry remains
 
-> **Verified:** one authenticated end-to-end Qwen inference response (36 prompt + 44 completion tokens) on 2026-10-22. See [the detailed evidence and remaining work](docs/LIVE_LAB_2026-10-22.md). GPU Pod scheduling, performance characterization, monitoring validation and teardown remain open.
+> **Verified Phase 1:** authenticated end-to-end Qwen inference, GPU VM concurrency benchmarks, Prometheus/DCGM targets UP, and later GKE/GPU VM teardown via project-wide CLI inventories. **Still pending:** GPU Pod scheduling in GKE, production security and monitoring, full cost reconciliation, and SGLang comparison. See [the pending register](docs/PRODUCTION_TARGET_ARCHITECTURE_AND_PENDING_REGISTER.md).
