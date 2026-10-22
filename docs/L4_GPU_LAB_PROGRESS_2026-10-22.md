@@ -1,7 +1,7 @@
 # GPU Lab Progress — 2026-10-22
 
 ## Status
-**In progress — standalone NVIDIA L4 VM allocated; NVIDIA driver verified successfully via nvidia-smi.** This is a Compute Engine capacity/driver learning step, **not a successful GKE/vLLM deployment**.
+**In progress — NVIDIA L4 driver and Docker GPU passthrough verified; vLLM not yet started.** This is a Compute Engine capacity/driver learning step, **not a successful GKE/vLLM deployment**.
 
 ## Environment
 - GCP project: `gke-vllm-learning-lab`
@@ -39,10 +39,18 @@ sudo python3 ~/cuda_installer.pyz verify_driver
 
 Observed successful `nvidia-smi` output: NVIDIA L4, NVIDIA-SMI 615.71.10, KMD 615.71.10, CUDA UMD 13.4, 23034 MiB total GPU memory, 0 MiB used, 0% GPU utilization, no GPU processes. Driver works; CUDA toolkit installation has not been established.\n\nIf future driver checks fail, inspect `/opt/google/cuda-installer/installer.log` and package/kernel status **before retrying again**.
 
+## Container GPU verification — confirmed 2026-10-22 07:13:48
+
+- Docker 20.10.24+dfsg1 installed from Debian packages.
+- NVIDIA Container Toolkit CLI 1.20.1 installed from NVIDIA package repository.
+- `sudo nvidia-ctk runtime configure --runtime=docker` updated `/etc/docker/daemon.json`; Docker service restarted.
+- Ran `sudo docker run --rm --gpus all ubuntu:22.04 nvidia-smi` successfully.
+- Container output detected NVIDIA L4, driver/KMD 615.71.10, CUDA UMD 13.4, 23034 MiB GPU memory, 0 MiB used, 0% utilization. This verifies container visibility, **not CUDA compute execution or vLLM inference**.
+
 ## Pending milestones
 - [x] NVIDIA driver installed and `nvidia-smi` verified
 - [ ] Confirm CUDA runtime/driver compatibility
-- [ ] Install Docker and NVIDIA Container Toolkit; validate GPU access from container
+- [x] Install Docker and NVIDIA Container Toolkit; validate GPU access from container
 - [ ] Run pinned small-model vLLM container and test OpenAI-compatible endpoint
 - [ ] Measure GPU utilization, VRAM, inference throughput, latency, and KV-cache behavior
 - [ ] Decide whether to return to GKE after standalone VM lab (requires explicit approval and cost/capacity check)
@@ -55,4 +63,4 @@ Observed successful `nvidia-smi` output: NVIDIA L4, NVIDIA-SMI 615.71.10, KMD 61
 - Do not commit credentials, secrets, billing IDs, or ephemeral external IPs.
 
 ## Evidence limitations
-This record is based on terminal output supplied during the session, not independent access to the live VM or Cloud Billing. Driver installation and `nvidia-smi` are verified from user-provided terminal output. Docker, CUDA Toolkit, vLLM and end-to-end inference **are not yet verified**.
+This record is based on terminal output supplied during the session, not independent access to the live VM or Cloud Billing. Driver installation and `nvidia-smi` are verified from user-provided terminal output. Docker GPU passthrough is verified; CUDA Toolkit, CUDA compute execution, vLLM and end-to-end inference **are not yet verified**.
